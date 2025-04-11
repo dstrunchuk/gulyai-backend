@@ -1,48 +1,51 @@
 from fastapi import FastAPI, Request
-from telegram import Bot
-import os
-import asyncio
-from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
+import json, os
+import httpx
 
-load_dotenv()
-
-# 🔐 Токен Telegram бота
-TOKEN = os.getenv("TOKEN")
-bot = Bot(token=TOKEN)
-
-# 🚀 FastAPI app
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+TELEGRAM_TOKEN = os.getenv("TOKEN")
+TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+USERS_FILE = "users.json"
+
 @app.get("/")
-def root():
+def read_root():
     return {"msg": "🔥 Gulyai backend работает!"}
 
 @app.post("/api/form")
-async def receive_form(request: Request):
-    data = await request.json()
+async def receive_form(req: Request):
+    data = await req.json()
 
-    name = data.get("name", "—")
-    address = data.get("address", "—")
-    age = data.get("age", "—")
-    interests = data.get("interests", "—")
-    activity = data.get("activity", "—")
-    vibe = data.get("vibe", "—")
-    user_id = data.get("telegram_id")
+    # Сохраняем в users.json
+    users = []
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "r") as f:
+            users = json.load(f)
 
-    msg = (
-        f"📬 Анкета получена!\n\n"
-        f"Имя: {name}\n"
-        f"Адрес: {address}\n"
-        f"Возраст: {age}\n"
-        f"Интересы: {interests}\n"
-        f"Цель: {activity}\n"
-        f"Настроение: {vibe}"
-    )
+    users.append(data)
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f, indent=2)
 
-    if user_id:
-        try:
-            await bot.send_message(chat_id=user_id, text=msg)
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
+    # Ответ в Telegram
+    chat_id = data.get("chat_id")
+    if chat_id:
+        msg = (
+            f"📬 Анкета получена!\n\n"
+            f"Имя: {data.get('name', '—')}\n"
+            f"Адрес: {data.get('address', '—')}\n"
+            f"Возраст: {data.get('age', '—')}\n"
+            f"Интересы: {data.get('interests', '—')}\n"
+            f"Цель: {data.get('activity', '—')}\n"
+            f"Настроение: {data.get('vibe', '—')}"
+        )
+        await httpx.post(TELEGRAM_API, json={"chat_id": chat_id, "text": msg})
 
     return {"ok": True}
