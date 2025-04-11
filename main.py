@@ -5,34 +5,33 @@ import httpx
 
 app = FastAPI()
 
-# ✅ CORS для Vercel + локалка
+# 🛡️ Разрешаем CORS из Vercel и локально
+origins = [
+    "https://gulyai-webapp.vercel.app",
+    "http://localhost:5173"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://gulyai-webapp.vercel.app",
-        "http://localhost:5173"
-    ],
+    allow_origins=origins,  # 💥 без "*"
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ Константы
 TELEGRAM_TOKEN = os.getenv("TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 USERS_FILE = "users.json"
 
-# ✅ Корневой эндпоинт
 @app.get("/")
-def root():
+def read_root():
     return {"msg": "🔥 Gulyai backend работает!"}
 
-# ✅ Эндпоинт приёма анкеты
 @app.post("/api/form")
 async def receive_form(req: Request):
     data = await req.json()
 
-    # Сохраняем в users.json
+    # Сохраняем
     users = []
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, "r") as f:
