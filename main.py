@@ -3,13 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import os, json
 import httpx
 
-app = FastAPI()
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+import os, json
+import httpx
 
-# ✅ Разрешаем CORS только с фронта (Vercel и локалка)
-origins = [
-    "https://gulyai-webapp.vercel.app",
-    "http://localhost:5173"
-]
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,6 +20,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+def read_root():
+    return {"msg": "🔥 Gulyai backend работает!"}
+
 
 TELEGRAM_TOKEN = os.getenv("TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
