@@ -5,33 +5,40 @@ import httpx
 
 app = FastAPI()
 
-# 🔐 CORS: разрешить только фронт
+# 🌐 CORS (разрешаем запросы от фронта)
 origins = [
-    "https://gulyai-webapp.vercel.app",
-    "http://localhost:5173"
+    "https://gulyai-webapp.vercel.app",  # продакшн
+    "http://localhost:5173",             # локалка
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,         # 👈 не "*", а список
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# 📁 Константы
 TELEGRAM_TOKEN = os.getenv("TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 USERS_FILE = "users.json"
 
+# 🔥 Проверка
 @app.get("/")
-def root():
+def read_root():
     return {"msg": "🔥 Gulyai backend работает!"}
 
+# 📩 Прием анкеты
 @app.post("/api/form")
 async def receive_form(req: Request):
     data = await req.json()
 
-    # ⏺️ Сохраняем анкету
+    # 📸 Проверим base64-фото (если есть)
+    if data.get("photo"):
+        print("📸 Фото (base64), длина:", len(data["photo"]))
+
+    # 💾 Сохраняем анкету
     users = []
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, "r") as f:
