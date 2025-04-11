@@ -1,15 +1,11 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-import os, json
-import httpx
-
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-import os, json
+import json, os
 import httpx
 
 app = FastAPI()
 
+# ✅ CORS для Vercel + локалка
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -21,24 +17,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-def read_root():
-    return {"msg": "🔥 Gulyai backend работает!"}
-
-
+# ✅ Константы
 TELEGRAM_TOKEN = os.getenv("TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 USERS_FILE = "users.json"
 
+# ✅ Корневой эндпоинт
 @app.get("/")
-def read_root():
+def root():
     return {"msg": "🔥 Gulyai backend работает!"}
 
+# ✅ Эндпоинт приёма анкеты
 @app.post("/api/form")
 async def receive_form(req: Request):
     data = await req.json()
 
-    # 💾 Сохраняем в users.json
+    # Сохраняем в users.json
     users = []
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, "r") as f:
@@ -48,7 +42,7 @@ async def receive_form(req: Request):
     with open(USERS_FILE, "w") as f:
         json.dump(users, f, indent=2)
 
-    # 🤖 Ответ в Telegram
+    # Ответ в Telegram
     chat_id = data.get("chat_id")
     if chat_id:
         msg = (
