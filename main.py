@@ -11,7 +11,7 @@ origins = [
     "http://localhost:5173"
 ]
 
-# ✅ Настройка CORS
+# ✅ Подключаем CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -20,6 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 📌 Константы
 TELEGRAM_TOKEN = os.getenv("TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 USERS_FILE = "users.json"
@@ -32,7 +33,7 @@ def read_root():
 async def receive_form(req: Request):
     data = await req.json()
 
-    # ✅ Сохраняем в файл
+    # 💾 Сохраняем пользователя
     users = []
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, "r") as f:
@@ -42,7 +43,7 @@ async def receive_form(req: Request):
     with open(USERS_FILE, "w") as f:
         json.dump(users, f, indent=2)
 
-    # ✅ Ответ пользователю в Telegram
+    # 📩 Отправляем в Telegram
     chat_id = data.get("chat_id")
     if chat_id:
         msg = (
