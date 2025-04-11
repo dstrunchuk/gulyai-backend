@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import json, os
@@ -19,6 +20,21 @@ USERS_FILE = "users.json"
 @app.get("/")
 def read_root():
     return {"msg": "🔥 Gulyai backend работает!"}
+
+# ✅ Разрешаем CORS-запросы от WebApp
+origins = [
+    "https://gulyai-webapp.vercel.app",  # наш фронт
+    "http://localhost:5173",             # локальная разработка
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.post("/api/form")
 async def receive_form(req: Request):
