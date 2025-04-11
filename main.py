@@ -1,19 +1,20 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-import json, os
+import os, json
 import httpx
 
 app = FastAPI()
 
-# 🛡️ Разрешаем CORS из Vercel и локально
+# ✅ Разрешённые источники
 origins = [
     "https://gulyai-webapp.vercel.app",
     "http://localhost:5173"
 ]
 
+# ✅ Настройка CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # 💥 без "*"
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,7 +32,7 @@ def read_root():
 async def receive_form(req: Request):
     data = await req.json()
 
-    # Сохраняем
+    # ✅ Сохраняем в файл
     users = []
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, "r") as f:
@@ -41,7 +42,7 @@ async def receive_form(req: Request):
     with open(USERS_FILE, "w") as f:
         json.dump(users, f, indent=2)
 
-    # Ответ в Telegram
+    # ✅ Ответ пользователю в Telegram
     chat_id = data.get("chat_id")
     if chat_id:
         msg = (
