@@ -23,7 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Env ---
 TELEGRAM_TOKEN = os.getenv("TOKEN") or os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -31,12 +30,10 @@ SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- Проверка ---
 @app.get("/")
 def root():
     return {"msg": "🔥 Gulyai backend работает!"}
 
-# --- Обработка формы ---
 @app.post("/api/form")
 async def receive_form(
     name: str = Form(...),
@@ -49,12 +46,13 @@ async def receive_form(
     photo: UploadFile = File(None)
 ):
     try:
-        # 1. Upload photo to Cloudinary
         photo_url = None
         if photo:
             photo_url = await upload_to_cloudinary(photo)
 
-        # 2. Prepare data for Supabase
+        # Удаляем старую анкету если есть
+        supabase.table("users").delete().eq("chat_id", chat_id).execute()
+
         user_data = {
             "name": name,
             "address": address,
@@ -66,14 +64,8 @@ async def receive_form(
             "photo_url": photo_url
         }
 
-        # 3. Remove existing profile with same chat_id
-        supabase.table("users").delete().eq("chat_id", chat_id).execute()
+        supabase.table("users").insert(user_data).execute()
 
-        # 4. Save new profile
-        response = supabase.table("users").insert(user_data).execute()
-        print("✅ Данные сохранены в Supabase")
-
-        # 5. Send message to Telegram
         if chat_id:
             msg = (
                 f"📬 Анкета получена!\n\n"
@@ -84,16 +76,9 @@ async def receive_form(
                 f"Цель: {activity}\n"
                 f"Настроение: {vibe}"
             )
-            try:
-                await httpx.post(TELEGRAM_API, json={"chat_id": chat_id, "text": msg})
-                print(f"📤 Отправлено в Telegram chat_id={chat_id}")
-            except Exception as e:
-                print(f"❌ Ошибка при отправке в Telegram: {e}")
-        else:
-            print("⚠️ chat_id отсутствует — Telegram пропущен")
+            await httpx.post(TELEGRAM_API, json={"chat_id": chat_id, "text": msg})
 
         return JSONResponse(content={"ok": True, "photo_url": photo_url})
-
     except Exception as error:
-        print(f"❌ Ошибка при обработке формы: {error}")
+        print(f"❌ Ошибка: {error}")
         return JSONResponse(status_code=500, content={"ok": False, "error": str(error)})
