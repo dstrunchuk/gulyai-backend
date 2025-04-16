@@ -12,5 +12,11 @@ cloudinary.config(
 )
 
 async def upload_to_cloudinary(file):
-    result = cloudinary.uploader.upload(file.file, folder="gulyai_profiles")
+    result = cloudinary.uploader.upload(
+        file.file,
+        folder="gulyai_profiles",
+        transformation=[
+            {"width": 600, "height": 600, "crop": "limit", "quality": "auto"}
+        ]
+    )
     return result["secure_url"]
