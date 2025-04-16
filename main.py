@@ -5,6 +5,7 @@ import os, httpx
 from dotenv import load_dotenv
 from cloudinary_utils import upload_to_cloudinary
 from supabase import create_client, Client
+from cloudinary.uploader import destroy
 
 load_dotenv()
 app = FastAPI()
@@ -45,12 +46,28 @@ async def receive_form(
     photo: UploadFile = File(None)
 ):
     try:
+        # 1. Найдём старое фото (если было)
+        old = supabase.table("users").select("photo_url").eq("chat_id", chat_id).single().execute()
+        old_url = old.data.get("photo_url") if old.data else None
+
+        # 2. Удалим старую анкету
+        supabase.table("users").delete().eq("chat_id", chat_id).execute()
+
+        # 3. Удалим старое фото из Cloudinary
+        if old_url:
+            try:
+                public_id = old_url.split("/")[-1].split(".")[0]
+                destroy(f"gulyai_profiles/{public_id}")
+                print("🧹 Удалено старое фото:", public_id)
+            except Exception as e:
+                print("⚠️ Не удалось удалить фото:", e)
+
+        # 4. Загрузим новое фото (если есть)
         photo_url = None
         if photo:
             photo_url = await upload_to_cloudinary(photo)
 
-        supabase.table("users").delete().eq("chat_id", chat_id).execute()
-
+        # 5. Сохраняем анкету
         user_data = {
             "name": name,
             "address": address,
@@ -64,6 +81,7 @@ async def receive_form(
 
         supabase.table("users").insert(user_data).execute()
 
+        # 6. Отправим в Telegram
         if chat_id:
             msg = (
                 f"📬 Анкета получена!\n\n"
