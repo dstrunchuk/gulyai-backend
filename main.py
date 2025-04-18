@@ -118,8 +118,10 @@ async def update_profile(data: dict):
 @app.get("/api/profile/{chat_id}")
 def get_profile(chat_id: str):
     try:
-        result = supabase.table("users").select("*").eq("chat_id", chat_id).single().execute()
-        return result.data
+        result = supabase.table("users").select("*").eq("chat_id", chat_id).execute()
+        if not result.data:
+            return JSONResponse(status_code=404, content={"error": "Profile not found"})
+        return result.data[0]
     except Exception as error:
         print("❌ Ошибка при получении профиля:", error)
         return JSONResponse(status_code=500, content={"error": str(error)})
