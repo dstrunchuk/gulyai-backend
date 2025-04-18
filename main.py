@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from cloudinary_utils import upload_to_cloudinary
 from supabase import create_client, Client
 from cloudinary.uploader import destroy
+from datetime import datetime
 
 load_dotenv()
 app = FastAPI()
@@ -80,7 +81,8 @@ async def receive_form(
             "activity": activity,
             "vibe": vibe,
             "chat_id": chat_id,
-            "photo_url": photo_url
+            "photo_url": photo_url,
+            "created_at": datetime.utcnow().isoformat()
         }
 
         supabase.table("users").insert(user_data).execute()
