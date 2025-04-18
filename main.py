@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, UploadFile, File
+from fastapi import FastAPI, Form, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from cloudinary_utils import upload_to_cloudinary
 from supabase import create_client, Client
 from cloudinary.uploader import destroy
-from datetime import datetime
 
 load_dotenv()
 app = FastAPI()
@@ -51,14 +50,14 @@ async def receive_form(
         if not chat_id:
             return JSONResponse(status_code=400, content={"ok": False, "error": "chat_id is missing"})
 
-        # 1. Найдём старое фото (если было), без .single()
+        # 1. Найдём старое фото
         old = supabase.table("users").select("photo_url").eq("chat_id", chat_id).execute()
         old_url = old.data[0]["photo_url"] if old.data else None
 
         # 2. Удалим старую анкету
         supabase.table("users").delete().eq("chat_id", chat_id).execute()
 
-        # 3. Удалим старое фото из Cloudinary
+        # 3. Удалим фото из Cloudinary
         if old_url:
             try:
                 public_id = old_url.split("/")[-1].split(".")[0]
@@ -67,7 +66,7 @@ async def receive_form(
             except Exception as e:
                 print("⚠️ Не удалось удалить фото:", e)
 
-        # 4. Загрузим новое фото (если есть)
+        # 4. Загрузим новое фото
         photo_url = None
         if photo:
             photo_url = await upload_to_cloudinary(photo)
@@ -81,13 +80,12 @@ async def receive_form(
             "activity": activity,
             "vibe": vibe,
             "chat_id": chat_id,
-            "photo_url": photo_url,
-            "created_at": datetime.utcnow().isoformat()
+            "photo_url": photo_url
         }
 
         supabase.table("users").insert(user_data).execute()
 
-        # 6. Отправим в Telegram
+        # 6. Уведомление в Telegram
         msg = (
             f"📬 Анкета получена!\n\n"
             f"Имя: {name}\n"
@@ -125,5 +123,34 @@ def get_profile(chat_id: str):
             return JSONResponse(status_code=404, content={"error": "Profile not found"})
         return result.data[0]
     except Exception as error:
-        print("❌ Ошибка при получении профиля:", error)
         return JSONResponse(status_code=500, content={"error": str(error)})
+
+@app.post("/api/delete-profile")
+async def delete_profile(request: Request):
+    try:
+        body = await request.json()
+        chat_id = body.get("chat_id")
+        if not chat_id:
+            return JSONResponse(status_code=400, content={"error": "chat_id is required"})
+
+        # Получим ссылку на фото
+        result = supabase.table("users").select("photo_url").eq("chat_id", chat_id).execute()
+        photo_url = result.data[0]["photo_url"] if result.data else None
+
+        # Удалим анкету
+        supabase.table("users").delete().eq("chat_id", chat_id).execute()
+
+        # Удалим фото из Cloudinary
+        if photo_url:
+            try:
+                public_id = photo_url.split("/")[-1].split(".")[0]
+                destroy(f"gulyai_profiles/{public_id}")
+                print("🗑️ Фото удалено из Cloudinary:", public_id)
+            except Exception as e:
+                print("⚠️ Ошибка удаления фото:", e)
+
+        return {"ok": True}
+    except Exception as error:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"ok": False, "error": str(error)})
