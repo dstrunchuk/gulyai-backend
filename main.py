@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Form, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import os, httpx
+import os
+import httpx
 from dotenv import load_dotenv
 from cloudinary_utils import upload_to_cloudinary
 from supabase import create_client, Client
@@ -46,9 +47,12 @@ async def receive_form(
     photo: UploadFile = File(None)
 ):
     try:
-        # 1. Найдём старое фото (если было)
-        old = supabase.table("users").select("photo_url").eq("chat_id", chat_id).single().execute()
-        old_url = old.data.get("photo_url") if old.data else None
+        if not chat_id:
+            return JSONResponse(status_code=400, content={"ok": False, "error": "chat_id is missing"})
+
+        # 1. Найдём старое фото (если было), без .single()
+        old = supabase.table("users").select("photo_url").eq("chat_id", chat_id).execute()
+        old_url = old.data[0]["photo_url"] if old.data else None
 
         # 2. Удалим старую анкету
         supabase.table("users").delete().eq("chat_id", chat_id).execute()
@@ -82,19 +86,21 @@ async def receive_form(
         supabase.table("users").insert(user_data).execute()
 
         # 6. Отправим в Telegram
-        if chat_id:
-            msg = (
-                f"📬 Анкета получена!\n\n"
-                f"Имя: {name}\n"
-                f"Адрес: {address}\n"
-                f"Возраст: {age}\n"
-                f"Интересы: {interests}\n"
-                f"Цель: {activity}\n"
-                f"Настроение: {vibe}"
-            )
-            await httpx.post(TELEGRAM_API, json={"chat_id": chat_id, "text": msg})
+        msg = (
+            f"📬 Анкета получена!\n\n"
+            f"Имя: {name}\n"
+            f"Адрес: {address}\n"
+            f"Возраст: {age}\n"
+            f"Интересы: {interests}\n"
+            f"Цель: {activity}\n"
+            f"Настроение: {vibe}"
+        )
+
+        async with httpx.AsyncClient() as client:
+            await client.post(TELEGRAM_API, json={"chat_id": chat_id, "text": msg})
 
         return JSONResponse(content={"ok": True, "photo_url": photo_url})
+
     except Exception as error:
         import traceback
         traceback.print_exc()
