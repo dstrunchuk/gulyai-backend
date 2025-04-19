@@ -209,31 +209,31 @@ def shutdown_event():
 
 @app.post("/api/text")
 async def broadcast_message(request: Request):
-    try:
-        data = await request.json()
-        text = data.get("text")
-        sender_id = data.get("sender_id")
+    secret = request.headers.get("Authorization")
 
-        if str(sender_id) != "906725069":
-            return JSONResponse(status_code=403, content={"error": "Недостаточно прав"})
+    if secret != f"Bearer {os.getenv('BROADCAST_SECRET')}":
+        return JSONResponse(status_code=403, content={"error": "Forbidden"})
 
-        if not text:
-            return JSONResponse(status_code=400, content={"error": "Текст сообщения обязателен"})
+    data = await request.json()
+    message = data.get("message")
 
-        result = supabase.table("users").select("chat_id").execute()
-        chat_ids = [row["chat_id"] for row in result.data if row.get("chat_id")]
+    if not message:
+        return JSONResponse(status_code=400, content={"error": "Message is required"})
 
-        sent = 0
-        async with httpx.AsyncClient() as client:
-            for cid in chat_ids:
-                try:
-                    await client.post(TELEGRAM_API, json={"chat_id": cid, "text": text})
-                    sent += 1
-                except Exception as e:
-                    print(f"⚠️ Не удалось отправить {cid}: {e}")
+    users = supabase.table("users").select("chat_id").execute().data
+    if not users:
+        return {"status": "No users found"}
 
-        return {"ok": True, "sent": sent}
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JSONResponse(status_code=500, content={"error": str(e)})
+    success = 0
+    async with httpx.AsyncClient() as client:
+        for user in users:
+            try:
+                await client.post(
+                    TELEGRAM_API,
+                    json={"chat_id": user["chat_id"], "text": message}
+                )
+                success += 1
+            except Exception as e:
+                print(f"❌ Не удалось отправить {user['chat_id']}: {e}")
+
+    return {"status": f"✅ Успешно отправлено {success} пользователям"}
