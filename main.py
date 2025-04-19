@@ -31,9 +31,17 @@ SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-@app.get("/")
-def root():
-    return {"msg": "🔥 Gulyai backend работает!"}
+@app.get("/api/profile/{chat_id}")
+async def get_profile(chat_id: str):
+    try:
+        # Приводим к строке, если вдруг chat_id — int
+        result = supabase.table("users").select("*").eq("chat_id", str(chat_id)).single().execute()
+        if result.data:
+            return result.data
+        raise HTTPException(status_code=404, detail="Анкета не найдена")
+    except Exception as e:
+        print("❌ Ошибка при получении анкеты:", e)
+        raise HTTPException(status_code=500, detail="Ошибка сервера")
 
 @app.post("/api/form")
 async def receive_form(
