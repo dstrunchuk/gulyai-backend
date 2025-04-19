@@ -113,15 +113,6 @@ async def receive_form(
 @app.post("/api/update-profile")
 async def update_profile(data: dict):
     try:
-        chat_id = data.pop("chat_id")
-        supabase.table("users").update(data).eq("chat_id", chat_id).execute()
-        return {"ok": True}
-    except Exception as error:
-        return JSONResponse(status_code=500, content={"ok": False, "error": str(error)})
-
-@app.post("/api/update-profile")
-async def update_profile(data: dict):
-    try:
         chat_id = data.get("chat_id")
         if not chat_id:
             return JSONResponse(status_code=400, content={"ok": False, "error": "chat_id is required"})
@@ -133,6 +124,8 @@ async def update_profile(data: dict):
         return {"ok": True}
     except Exception as error:
         return JSONResponse(status_code=500, content={"ok": False, "error": str(error)})
+
+
 
 @app.post("/api/delete-profile")
 async def delete_profile(request: Request):
