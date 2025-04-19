@@ -9,6 +9,7 @@ from supabase import create_client, Client
 from cloudinary.uploader import destroy
 from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException
 
+
 load_dotenv()
 app = FastAPI()
 
@@ -165,3 +166,43 @@ async def delete_profile(request: Request):
         import traceback
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"ok": False, "error": str(error)})
+    
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime, timedelta
+
+def delete_old_profiles():
+    print("🧹 Проверка анкет старше 30 дней...")
+
+    cutoff_date = (datetime.utcnow() - timedelta(days=30)).isoformat()
+    result = supabase.table("users").select("chat_id", "photo_url", "created_at").lt("created_at", cutoff_date).execute()
+    old_users = result.data
+
+    if not old_users:
+        print("✅ Нет старых анкет.")
+        return
+
+    for user in old_users:
+        chat_id = user.get("chat_id")
+        photo_url = user.get("photo_url")
+
+        # Удаление фото
+        if photo_url:
+            try:
+                public_id = photo_url.split("/")[-1].split(".")[0]
+                destroy(f"gulyai_profiles/{public_id}")
+                print(f"🗑️ Фото удалено: {public_id}")
+            except Exception as e:
+                print("⚠️ Не удалось удалить фото:", e)
+
+        # Удаление анкеты
+        supabase.table("users").delete().eq("chat_id", chat_id).execute()
+        print(f"🗑️ Удалена анкета: {chat_id}")
+
+# Запускаем планировщик
+scheduler = BackgroundScheduler()
+scheduler.add_job(delete_old_profiles, "interval", hours=24)
+scheduler.start()
+
+@app.on_event("shutdown")
+def shutdown_event():
+    scheduler.shutdown()   
