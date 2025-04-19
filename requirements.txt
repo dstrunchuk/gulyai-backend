@@ -6,3 +6,4 @@ cloudinary
 supabase
 python-multipart
 python-telegram-bot
+apscheduler
