@@ -206,3 +206,34 @@ scheduler.start()
 @app.on_event("shutdown")
 def shutdown_event():
     scheduler.shutdown()   
+
+@app.post("/api/broadcast")
+async def broadcast_message(request: Request):
+    try:
+        data = await request.json()
+        text = data.get("text")
+        sender_id = data.get("sender_id")
+
+        if str(sender_id) != "906725069":
+            return JSONResponse(status_code=403, content={"error": "Недостаточно прав"})
+
+        if not text:
+            return JSONResponse(status_code=400, content={"error": "Текст сообщения обязателен"})
+
+        result = supabase.table("users").select("chat_id").execute()
+        chat_ids = [row["chat_id"] for row in result.data if row.get("chat_id")]
+
+        sent = 0
+        async with httpx.AsyncClient() as client:
+            for cid in chat_ids:
+                try:
+                    await client.post(TELEGRAM_API, json={"chat_id": cid, "text": text})
+                    sent += 1
+                except Exception as e:
+                    print(f"⚠️ Не удалось отправить {cid}: {e}")
+
+        return {"ok": True, "sent": sent}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
