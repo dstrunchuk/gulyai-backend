@@ -119,15 +119,20 @@ async def update_profile(data: dict):
     except Exception as error:
         return JSONResponse(status_code=500, content={"ok": False, "error": str(error)})
 
-@app.get("/api/profile/{chat_id}")
-def get_profile(chat_id: str):
+@app.post("/api/update-profile")
+async def update_profile(data: dict):
     try:
-        result = supabase.table("users").select("*").eq("chat_id", chat_id).execute()
-        if not result.data:
-            return JSONResponse(status_code=404, content={"error": "Profile not found"})
-        return result.data[0]
+        chat_id = data.get("chat_id")
+        if not chat_id:
+            return JSONResponse(status_code=400, content={"ok": False, "error": "chat_id is required"})
+
+        # Убираем chat_id из данных, чтобы не пытаться его обновить
+        data.pop("chat_id", None)
+
+        supabase.table("users").update(data).eq("chat_id", chat_id).execute()
+        return {"ok": True}
     except Exception as error:
-        return JSONResponse(status_code=500, content={"error": str(error)})
+        return JSONResponse(status_code=500, content={"ok": False, "error": str(error)})
 
 @app.post("/api/delete-profile")
 async def delete_profile(request: Request):
