@@ -207,7 +207,7 @@ scheduler.start()
 def shutdown_event():
     scheduler.shutdown()   
 
-@app.post("/api/broadcast")
+@app.post("/api/text")
 async def broadcast_message(request: Request):
     try:
         data = await request.json()
