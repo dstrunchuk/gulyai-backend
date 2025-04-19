@@ -44,6 +44,8 @@ async def receive_form(
     activity: str = Form(...),
     vibe: str = Form(...),
     chat_id: str = Form(...),
+    latitude: float = Form(None),
+    longitude: float = Form(None),
     photo: UploadFile = File(None)
 ):
     try:
@@ -80,7 +82,9 @@ async def receive_form(
             "activity": activity,
             "vibe": vibe,
             "chat_id": chat_id,
-            "photo_url": photo_url
+            "photo_url": photo_url,
+            "latitude": latitude,
+            "longitude": longitude
         }
 
         supabase.table("users").insert(user_data).execute()
