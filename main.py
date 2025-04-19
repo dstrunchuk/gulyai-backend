@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from cloudinary_utils import upload_to_cloudinary
 from supabase import create_client, Client
 from cloudinary.uploader import destroy
+from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException
 
 load_dotenv()
 app = FastAPI()
