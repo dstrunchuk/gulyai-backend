@@ -13,10 +13,12 @@ from cloudinary.uploader import destroy
 from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException
 from fastapi import APIRouter, Request
 
+
 router = APIRouter()
 
 load_dotenv()
 app = FastAPI()
+
 
 origins = [
     "https://gulyai-webapp.vercel.app",
@@ -262,6 +264,7 @@ async def get_people():
     except Exception as e:
         print("❌ Ошибка при получении людей:", e)
         raise HTTPException(status_code=500, detail="Ошибка сервера")
+app.include_router(router)
     
 @app.on_event("startup")
 async def schedule_status_check():

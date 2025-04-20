@@ -48,3 +48,5 @@ async def auto_reset_status():
     except Exception as e:
         print(f"❌ Ошибка авто-сброса: {e}")
         return {"ok": False, "error": str(e)}
+    
+    
