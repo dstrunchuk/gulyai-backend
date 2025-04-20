@@ -1,18 +1,21 @@
+from fastapi import APIRouter
 import time
-import os
-import httpx
-from dotenv import load_dotenv
 from supabase import create_client
+import os
+from dotenv import load_dotenv
+import httpx
 
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
-BOT_TOKEN = os.getenv("TOKEN")
+BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+router = APIRouter()
 
-def auto_reset_status():
+# Эту функцию будем вызывать в main при старте
+async def auto_reset_status():
     try:
         now = int(time.time() * 1000)
         users = supabase.table("users").select("*").execute().data
@@ -26,8 +29,9 @@ def auto_reset_status():
                     "status_duration": None
                 }).eq("chat_id", user["chat_id"]).execute()
 
+                # Уведомление пользователю
                 try:
-                    httpx.post(
+                    await httpx.post(
                         f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
                         json={
                             "chat_id": user["chat_id"],
@@ -39,6 +43,8 @@ def auto_reset_status():
 
                 updated += 1
 
+        print(f"✅ Авто-сброс статуса: {updated} пользователей обновлено.")
         return {"ok": True, "updated": updated}
     except Exception as e:
+        print(f"❌ Ошибка авто-сброса: {e}")
         return {"ok": False, "error": str(e)}
