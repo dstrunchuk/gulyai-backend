@@ -4,11 +4,15 @@ from fastapi.responses import JSONResponse
 import os
 import httpx
 import time
+import asyncio
+from auto_status import auto_reset_status  # твоя логика сброса
 from dotenv import load_dotenv
 from cloudinary_utils import upload_to_cloudinary
 from supabase import create_client, Client
 from cloudinary.uploader import destroy
 from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException
+from auto_status import router as auto_status_router
+
 
 
 load_dotenv()
@@ -26,6 +30,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auto_status_router)
 
 TELEGRAM_TOKEN = os.getenv("TOKEN") or os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -257,3 +263,11 @@ async def get_people():
     except Exception as e:
         print("❌ Ошибка при получении людей:", e)
         raise HTTPException(status_code=500, detail="Ошибка сервера")
+    
+@app.on_event("startup")
+async def schedule_status_check():
+    async def loop():
+        while True:
+            await auto_reset_status()
+            await asyncio.sleep(600)  # каждые 10 минут
+    asyncio.create_task(loop())
