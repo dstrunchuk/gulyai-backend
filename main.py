@@ -18,13 +18,8 @@ from auto_status import router as auto_status_router
 load_dotenv()
 app = FastAPI()
 
-@app.on_event("startup")
-async def schedule_status_check():
-    async def loop():
-        while True:
-            await auto_reset_status()
-            await asyncio.sleep(600)  # каждые 10 минут
-    asyncio.create_task(loop())
+app.include_router(auto_status_router)
+
 
 origins = [
     "https://gulyai-webapp.vercel.app",
@@ -39,7 +34,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auto_status_router)
 
 TELEGRAM_TOKEN = os.getenv("TOKEN") or os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -272,3 +266,10 @@ async def get_people():
         print("❌ Ошибка при получении людей:", e)
         raise HTTPException(status_code=500, detail="Ошибка сервера")
     
+@app.on_event("startup")
+async def schedule_status_check():
+    async def loop():
+        while True:
+            await auto_reset_status()
+            await asyncio.sleep(600)  # каждые 10 минут
+    asyncio.create_task(loop())
