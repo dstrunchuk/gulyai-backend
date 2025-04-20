@@ -17,9 +17,6 @@ from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException
 load_dotenv()
 app = FastAPI()
 
-app.include_router(auto_status_router)
-
-
 origins = [
     "https://gulyai-webapp.vercel.app",
     "http://localhost:5173"
