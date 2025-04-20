@@ -127,12 +127,16 @@ async def update_profile(data: dict):
         if not chat_id:
             return JSONResponse(status_code=400, content={"ok": False, "error": "chat_id is required"})
 
-        # Убираем chat_id из данных, чтобы не пытаться его обновить
         data.pop("chat_id", None)
+
+        # Просто выводим для проверки
+        print("Получено обновление:", data)
 
         supabase.table("users").update(data).eq("chat_id", chat_id).execute()
         return {"ok": True}
     except Exception as error:
+        import traceback
+        traceback.print_exc()
         return JSONResponse(status_code=500, content={"ok": False, "error": str(error)})
 
 
