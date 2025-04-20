@@ -31,7 +31,7 @@ async def auto_reset_status():
 
                 # Уведомление пользователю
                 try:
-                    await httpx.post(
+                    httpx.post(
                         f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
                         json={
                             "chat_id": user["chat_id"],
