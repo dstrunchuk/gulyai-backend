@@ -269,3 +269,37 @@ async def schedule_status_check():
             auto_reset_status()  # убираем await
             await asyncio.sleep(600)
     asyncio.create_task(loop())
+
+@app.post("/api/send-meet-request")
+async def send_meet_request(data: dict):
+    try:
+        from_chat_id = data["from"]
+        to_chat_id = data["to"]
+        message = data["message"]
+
+        # Получаем имя отправителя
+        sender = supabase.table("users").select("name").eq("chat_id", from_chat_id).single().execute().data
+        sender_name = sender.get("name", "Кто-то")
+
+        await httpx.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+            json={
+                "chat_id": to_chat_id,
+                "text": f"📨 {sender_name} хочет встретиться с тобой!\n\nСообщение: {message}",
+                "reply_markup": {
+                    "inline_keyboard": [
+                        [
+                            {"text": "👀 Посмотреть анкету", "web_app": {"url": f"https://gulyai-webapp.vercel.app/profile?chat_id={from_chat_id}"}}
+                        ],
+                        [
+                            {"text": "✅ Согласен", "callback_data": f"agree_{from_chat_id}"},
+                            {"text": "❌ Не согласен", "callback_data": f"decline_{from_chat_id}"}
+                        ]
+                    ]
+                }
+            }
+        )
+
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
