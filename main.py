@@ -245,13 +245,14 @@ async def broadcast_message(request: Request):
 @app.get("/api/people")
 async def get_people():
     try:
-        now = int(time.time() * 1000)
+        now = int(time.time() * 1000)  # Текущее время в миллисекундах
         result = supabase.table("users") \
             .select("*") \
             .eq("status", "online") \
-            .gte("online_until", now) \
+            .gt("online_until", now) \
             .execute()
+
         return result.data
     except Exception as e:
-        print("❌ Ошибка people:", e)
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        print("❌ Ошибка при получении людей:", e)
+        raise HTTPException(status_code=500, detail="Ошибка сервера")
