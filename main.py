@@ -18,6 +18,14 @@ from auto_status import router as auto_status_router
 load_dotenv()
 app = FastAPI()
 
+@app.on_event("startup")
+async def schedule_status_check():
+    async def loop():
+        while True:
+            await auto_reset_status()
+            await asyncio.sleep(600)  # каждые 10 минут
+    asyncio.create_task(loop())
+
 origins = [
     "https://gulyai-webapp.vercel.app",
     "http://localhost:5173"
@@ -264,10 +272,3 @@ async def get_people():
         print("❌ Ошибка при получении людей:", e)
         raise HTTPException(status_code=500, detail="Ошибка сервера")
     
-@app.on_event("startup")
-async def schedule_status_check():
-    async def loop():
-        while True:
-            await auto_reset_status()
-            await asyncio.sleep(600)  # каждые 10 минут
-    asyncio.create_task(loop())
