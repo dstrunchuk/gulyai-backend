@@ -289,7 +289,7 @@ async def send_meet_request(data: dict):
                 "reply_markup": {
                     "inline_keyboard": [
                         [
-                            {"text": "👀 Посмотреть анкету", "web_app": {"url": f"https://gulyai-webapp.vercel.app/view-profile/{from_chat_id}"}}
+                            {"text": "👀 Посмотреть анкету", "web_app": {"url": f"https://gulyai-webapp.vercel.app/profile?chat_id={from_chat_id}"}}
                         ],
                         [
                             {"text": "✅ Согласен", "callback_data": f"agree_{from_chat_id}"},
