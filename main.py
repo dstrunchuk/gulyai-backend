@@ -241,3 +241,17 @@ async def broadcast_message(request: Request):
                 print(f"❌ Не удалось отправить {user['chat_id']}: {e}")
 
     return {"status": f"✅ Успешно отправлено {success} пользователям"}
+
+@app.get("/api/people")
+async def get_people():
+    try:
+        now = int(time.time() * 1000)
+        result = supabase.table("users") \
+            .select("*") \
+            .eq("status", "online") \
+            .gte("online_until", now) \
+            .execute()
+        return result.data
+    except Exception as e:
+        print("❌ Ошибка people:", e)
+        return JSONResponse(status_code=500, content={"error": str(e)})
