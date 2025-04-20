@@ -266,6 +266,6 @@ async def get_people():
 async def schedule_status_check():
     async def loop():
         while True:
-            await auto_reset_status()
-            await asyncio.sleep(600)  # каждые 10 минут
+            auto_reset_status()  # убираем await
+            await asyncio.sleep(600)
     asyncio.create_task(loop())
