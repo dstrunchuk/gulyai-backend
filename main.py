@@ -314,8 +314,8 @@ async def send_meet_request(data: dict):
                             {"text": "👀 Посмотреть анкету", "web_app": {"url": f"https://gulyai-webapp.vercel.app/view-profile/{from_chat_id}"}}
                         ],
                         [
-                            {"text": "✅ Согласен", "callback_data": f"agree_{from_chat_id}"},
-                            {"text": "❌ Не согласен", "callback_data": f"decline_{from_chat_id}"}
+                            {"text": "✅ Согласен(-на)", "callback_data": f"agree_{from_chat_id}"},
+                            {"text": "❌ Не согласен(-на)", "callback_data": f"decline_{from_chat_id}"}
                         ]
                     ]
                 }
