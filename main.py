@@ -11,8 +11,9 @@ from cloudinary_utils import upload_to_cloudinary
 from supabase import create_client, Client
 from cloudinary.uploader import destroy
 from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException
+from fastapi import APIRouter, Request
 
-
+router = APIRouter()
 
 load_dotenv()
 app = FastAPI()
@@ -270,6 +271,24 @@ async def schedule_status_check():
             await asyncio.sleep(600)
     asyncio.create_task(loop())
 
+@router.post("/api/set-offline")
+async def set_offline(request: Request):
+    data = await request.json()
+    chat_id = data.get("chat_id")
+
+    if not chat_id:
+        return {"error": "chat_id is required"}
+
+    try:
+        supabase.table("users").update({
+            "status": "offline",
+            "online_until": None,
+            "status_duration": None
+        }).eq("chat_id", chat_id).execute()
+        return {"ok": True}
+    except Exception as e:
+        return {"error": str(e)}    
+
 @app.post("/api/send-meet-request")
 async def send_meet_request(data: dict):
     try:
@@ -299,6 +318,7 @@ async def send_meet_request(data: dict):
                 }
             }
         )
+
 
         return {"ok": True}
     except Exception as e:
