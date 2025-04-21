@@ -31,13 +31,14 @@ async def auto_reset_status():
 
                 # Уведомление пользователю
                 try:
-                    httpx.post(
-                        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                        json={
-                            "chat_id": user["chat_id"],
-                            "text": "⏰ Время действия статуса истекло. Статус обновлён на: гуляю один.",
-                        }
-                    )
+                    async with httpx.AsyncClient() as client:
+                        await client.post(
+                            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                            json={
+                                "chat_id": user["chat_id"],
+                                "text": "⏰ Время действия статуса истекло. Статус обновлён на: гуляю один.",
+                            }
+                        )
                 except Exception as e:
                     print(f"Ошибка при отправке уведомления: {e}")
 
