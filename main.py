@@ -326,3 +326,11 @@ async def send_meet_request(data: dict):
         return {"ok": True}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+    
+@app.get("/api/stats")
+def get_stats():
+    try:
+        count = supabase.table("users").select("chat_id", count='exact').execute().count
+        return {"count": count}
+    except Exception as e:
+        return {"error": str(e)}
