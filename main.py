@@ -299,11 +299,12 @@ async def send_meet_request(data: dict):
         to_chat_id = data["to"]
         message = data["message"]
 
-        # Получаем имя отправителя
+        print(f"📨 Приглашение от {from_chat_id} -> {to_chat_id}")
+        print(f"Сообщение: {message}")
+
         sender = supabase.table("users").select("name").eq("chat_id", from_chat_id).single().execute().data
         sender_name = sender.get("name", "Кто-то")
 
-        # Сообщение получателю
         await httpx.post(
             f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
             json={
@@ -311,20 +312,15 @@ async def send_meet_request(data: dict):
                 "text": f"📨 {sender_name} хочет встретиться с тобой!\n\nСообщение: {message}",
                 "reply_markup": {
                     "inline_keyboard": [
-                        [
-                            {"text": "👀 Посмотреть анкету", "web_app": {"url": f"https://gulyai-webapp.vercel.app/view-profile/{from_chat_id}"}}
-                        ],
-                        [
-                            {"text": "✅ Согласен(-на)", "callback_data": f"agree_{from_chat_id}"},
-                            {"text": "❌ Не согласен(-на)", "callback_data": f"decline_{from_chat_id}"}
-                        ]
+                        [{"text": "👀 Посмотреть анкету", "web_app": {"url": f"https://gulyai-webapp.vercel.app/view-profile/{from_chat_id}"}}],
+                        [{"text": "✅ Согласен(-на)", "callback_data": f"agree_{from_chat_id}"},
+                         {"text": "❌ Не согласен(-на)", "callback_data": f"decline_{from_chat_id}"}]
                     ]
                 }
             }
         )
 
-        # Уведомление отправителю
-        await httpx.post(
+        response = await httpx.post(
             f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
             json={
                 "chat_id": from_chat_id,
@@ -332,8 +328,11 @@ async def send_meet_request(data: dict):
             }
         )
 
+        print(f"Ответ Telegram на подтверждение: {response.status_code} | {response.text}")
+
         return {"ok": True}
     except Exception as e:
+        print("❌ Ошибка в отправке приглашения:", str(e))
         return {"ok": False, "error": str(e)}
     
 @app.get("/api/stats")
