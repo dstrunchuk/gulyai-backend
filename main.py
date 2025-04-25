@@ -299,10 +299,10 @@ async def send_meet_request(data: dict):
         to_chat_id = data["to"]
         message = data["message"]
 
-        # Получаем имя отправителя
         sender = supabase.table("users").select("name").eq("chat_id", from_chat_id).single().execute().data
         sender_name = sender.get("name", "Кто-то")
 
+        # Отправляем получателю
         await httpx.post(
             f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
             json={
@@ -322,6 +322,14 @@ async def send_meet_request(data: dict):
             }
         )
 
+        # Уведомляем отправителя
+        await httpx.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+            json={
+                "chat_id": from_chat_id,
+                "text": "✅ Приглашение отправлено! Мы сообщим, когда другой человек ответит.",
+            }
+        )
 
         return {"ok": True}
     except Exception as e:
