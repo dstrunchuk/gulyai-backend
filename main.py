@@ -186,30 +186,37 @@ from datetime import datetime, timedelta
 def delete_old_profiles():
     print("🧹 Проверка анкет старше 30 дней...")
 
-    cutoff_date = (datetime.utcnow() - timedelta(days=30)).isoformat()
-    result = supabase.table("users").select("chat_id", "photo_url", "created_at").lt("created_at", cutoff_date).execute()
-    old_users = result.data
+    try:
+        cutoff_date = (datetime.utcnow() - timedelta(days=30)).isoformat()
+        result = supabase.table("users").select("chat_id", "photo_url", "created_at").lt("created_at", cutoff_date).execute()
+        old_users = result.data
 
-    if not old_users:
-        print("✅ Нет старых анкет.")
-        return
+        if not old_users:
+            print("✅ Нет старых анкет.")
+            return
 
-    for user in old_users:
-        chat_id = user.get("chat_id")
-        photo_url = user.get("photo_url")
+        for user in old_users:
+            chat_id = user.get("chat_id")
+            photo_url = user.get("photo_url")
 
-        # Удаление фото
-        if photo_url:
+            # Удаление фото
+            if photo_url:
+                try:
+                    public_id = photo_url.split("/")[-1].split(".")[0]
+                    destroy(f"gulyai_profiles/{public_id}")
+                    print(f"🗑️ Фото удалено: {public_id}")
+                except Exception as e:
+                    print(f"⚠️ Ошибка при удалении фото {photo_url}: {e}")
+
+            # Удаление анкеты
             try:
-                public_id = photo_url.split("/")[-1].split(".")[0]
-                destroy(f"gulyai_profiles/{public_id}")
-                print(f"🗑️ Фото удалено: {public_id}")
+                supabase.table("users").delete().eq("chat_id", chat_id).execute()
+                print(f"🗑️ Удалена анкета: {chat_id}")
             except Exception as e:
-                print("⚠️ Не удалось удалить фото:", e)
+                print(f"⚠️ Ошибка при удалении анкеты {chat_id}: {e}")
 
-        # Удаление анкеты
-        supabase.table("users").delete().eq("chat_id", chat_id).execute()
-        print(f"🗑️ Удалена анкета: {chat_id}")
+    except Exception as e:
+        print(f"❌ Ошибка проверки старых анкет: {e}")
 
 # Запускаем планировщик
 scheduler = BackgroundScheduler()
