@@ -34,7 +34,7 @@ app.add_middleware(
 )
 
 
-TELEGRAM_TOKEN = os.getenv("TOKEN") or os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
@@ -270,7 +270,7 @@ app.include_router(router)
 async def schedule_status_check():
     async def loop():
         while True:
-            auto_reset_status()  # убираем await
+            await auto_reset_status()  # добавили await
             await asyncio.sleep(600)
     asyncio.create_task(loop())
 
@@ -299,10 +299,11 @@ async def send_meet_request(data: dict):
         to_chat_id = data["to"]
         message = data["message"]
 
+        # Получаем имя отправителя
         sender = supabase.table("users").select("name").eq("chat_id", from_chat_id).single().execute().data
         sender_name = sender.get("name", "Кто-то")
 
-        # Отправляем получателю
+        # Сообщение получателю
         await httpx.post(
             f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
             json={
@@ -322,12 +323,12 @@ async def send_meet_request(data: dict):
             }
         )
 
-        # Уведомляем отправителя
+        # Уведомление отправителю
         await httpx.post(
             f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
             json={
                 "chat_id": from_chat_id,
-                "text": "✅ Приглашение отправлено! Мы сообщим, когда другой человек ответит.",
+                "text": "✅ Приглашение отправлено!",
             }
         )
 
