@@ -41,6 +41,8 @@ SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+app.include_router(router)
+
 @app.get("/api/profile/{chat_id}")
 def get_profile(chat_id: str):
     try:
