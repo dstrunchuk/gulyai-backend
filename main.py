@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, UploadFile, File, Request
+from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
@@ -10,14 +10,14 @@ from dotenv import load_dotenv
 from cloudinary_utils import upload_to_cloudinary
 from supabase import create_client, Client
 from cloudinary.uploader import destroy
-from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException
-from fastapi import APIRouter, Request
 
 
 router = APIRouter()
 
 load_dotenv()
 app = FastAPI()
+
+app.include_router(router)
 
 
 origins = [
@@ -41,7 +41,6 @@ SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-app.include_router(router)
 
 @app.get("/api/profile/{chat_id}")
 def get_profile(chat_id: str):
@@ -266,7 +265,6 @@ async def get_people():
     except Exception as e:
         print("❌ Ошибка при получении людей:", e)
         raise HTTPException(status_code=500, detail="Ошибка сервера")
-app.include_router(router)
     
 @app.on_event("startup")
 async def schedule_status_check():
@@ -307,32 +305,35 @@ async def send_meet_request(data: dict):
         sender = supabase.table("users").select("name").eq("chat_id", from_chat_id).single().execute().data
         sender_name = sender.get("name", "Кто-то")
 
-        await httpx.post(
-            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-            json={
-                "chat_id": to_chat_id,
-                "text": f"📨 {sender_name} хочет встретиться с тобой!\n\nСообщение: {message}",
-                "reply_markup": {
-                    "inline_keyboard": [
-                        [{"text": "👀 Посмотреть анкету", "web_app": {"url": f"https://gulyai-webapp.vercel.app/view-profile/{from_chat_id}"}}],
-                        [{"text": "✅ Согласен(-на)", "callback_data": f"agree_{from_chat_id}"},
-                         {"text": "❌ Не согласен(-на)", "callback_data": f"decline_{from_chat_id}"}]
-                    ]
+        async with httpx.AsyncClient() as client:
+            # Отправляем получателю
+            await client.post(
+                f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                json={
+                    "chat_id": to_chat_id,
+                    "text": f"📨 {sender_name} хочет встретиться с тобой!\n\nСообщение: {message}",
+                    "reply_markup": {
+                        "inline_keyboard": [
+                            [{"text": "👀 Посмотреть анкету", "web_app": {"url": f"https://gulyai-webapp.vercel.app/view-profile/{from_chat_id}"}}],
+                            [{"text": "✅ Согласен(-на)", "callback_data": f"agree_{from_chat_id}"},
+                             {"text": "❌ Не согласен(-на)", "callback_data": f"decline_{from_chat_id}"}]
+                        ]
+                    }
                 }
-            }
-        )
+            )
 
-        response = await httpx.post(
-            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-            json={
-                "chat_id": from_chat_id,
-                "text": "✅ Приглашение отправлено!",
-            }
-        )
+            # Отправляем подтверждение отправителю
+            response = await client.post(
+                f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                json={
+                    "chat_id": from_chat_id,
+                    "text": "✅ Приглашение отправлено!",
+                }
+            )
 
         print(f"Ответ Telegram на подтверждение: {response.status_code} | {response.text}")
-
         return {"ok": True}
+
     except Exception as e:
         print("❌ Ошибка в отправке приглашения:", str(e))
         return {"ok": False, "error": str(e)}
