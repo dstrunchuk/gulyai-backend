@@ -5,7 +5,7 @@ from datetime import datetime
 from supabase import create_client
 from timezonefinder import TimezoneFinder
 from datetime import datetime, timezone
-from time import time
+import time
 import pytz
 
 # Настройки
