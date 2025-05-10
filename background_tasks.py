@@ -114,11 +114,17 @@ async def send_daily_summary():
             if not user.get("latitude") or not user.get("longitude") or not user.get("chat_id"):
                 continue
 
+            # Проверка часового пояса и времени
+            tz_name = tf.timezone_at(lat=user["latitude"], lng=user["longitude"]) or "UTC"
+            tz = pytz.timezone(tz_name)
+            local_time = datetime.now(tz)
+
+            if not (9 <= local_time.hour < 12):
+                continue  # Только с 9 до 12 по местному времени
+
             # Проверка: уже отправляли ли уведомление сегодня
             last_summary = user.get("last_summary_sent")
             if last_summary:
-                tz_name = tf.timezone_at(lat=user["latitude"], lng=user["longitude"]) or "UTC"
-                tz = pytz.timezone(tz_name)
                 last_dt = datetime.fromtimestamp(last_summary / 1000, tz)
                 if last_dt.date() == now.date():
                     continue
