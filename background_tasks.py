@@ -35,7 +35,10 @@ async def notify_nearby_users():
         now_ts = int(time.time() * 1000)
         users = supabase.table("users").select("*").execute().data
 
-        online_users = [u for u in users if u.get("status") == "online" and u.get("online_until", 0) > now_ts]
+        online_users = [
+            u for u in users
+            if u.get("status") == "online" and isinstance(u.get("online_until"), int) and u["online_until"] > now_ts
+        ]
 
         for user in users:
             if not user.get("latitude") or not user.get("longitude"):
