@@ -4,6 +4,8 @@ import httpx
 from datetime import datetime
 from supabase import create_client
 from timezonefinder import TimezoneFinder
+from datetime import datetime, timezone
+from time import time
 import pytz
 
 # Настройки
@@ -32,6 +34,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 # Основная функция уведомления
 async def notify_nearby_users():
     try:
+        today = datetime.now(timezone.utc).date().isoformat()
         now_ts = int(time.time() * 1000)
         users = supabase.table("users").select("*").execute().data
 
@@ -92,7 +95,7 @@ async def notify_nearby_users():
 
                     # Обновляем last_notified
                     supabase.table("users").update({
-                        "last_notify_date": int(time.time() * 1000)
+                        "last_notify_date": today
                     }).eq("chat_id", user["chat_id"]).execute()
 
                     print(f"✅ Уведомление отправлено: {user['chat_id']}")
@@ -165,7 +168,7 @@ async def send_daily_summary():
                         )
 
                     supabase.table("users").update({
-                        "last_summary_sent": int(time.time() * 1000)
+                        "last_summary_sent": datetime.utcnow().isoformat()
                     }).eq("chat_id", user["chat_id"]).execute()
 
                     print(f"📬 Рядом кто-то был — уведомление отправлено: {user['chat_id']}")
