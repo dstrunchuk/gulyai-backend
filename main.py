@@ -374,3 +374,7 @@ def get_stats():
     except Exception as e:
         return {"error": str(e)}
     
+@app.get("/api/test-delete")
+async def test_delete():
+    delete_old_profiles()
+    return {"ok": True}
