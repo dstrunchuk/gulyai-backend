@@ -213,6 +213,19 @@ def delete_old_profiles():
                 except Exception as e:
                     print(f"⚠️ Ошибка при удалении фото {photo_url}: {e}")
 
+            # Уведомление в Telegram
+            try:
+                httpx.post(
+                    f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                    json={
+                        "chat_id": chat_id,
+                        "text": "⚠️ Ваша анкета была автоматически удалена, так как ей более 30 дней. Заполните её заново, если хотите продолжить использовать приложение!"
+                    }
+                )
+                print(f"✉️ Уведомление отправлено: {chat_id}")
+            except Exception as e:
+                print(f"⚠️ Ошибка при отправке уведомления: {e}")
+
             # Удаление анкеты
             try:
                 supabase.table("users").delete().eq("chat_id", chat_id).execute()
