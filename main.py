@@ -10,9 +10,14 @@ from dotenv import load_dotenv
 from cloudinary_utils import upload_to_cloudinary
 from supabase import create_client, Client
 from cloudinary.uploader import destroy
+from timezonefinder import TimezoneFinder
+from background_tasks import notify_nearby_users
+import pytz
 
 
 router = APIRouter()
+
+tf = TimezoneFinder()
 
 load_dotenv()
 app = FastAPI()
@@ -278,8 +283,9 @@ async def get_people(chat_id: str = Query(...)):
 async def schedule_status_check():
     async def loop():
         while True:
-            await auto_reset_status()  # добавили await
-            await asyncio.sleep(600)
+            await auto_reset_status()
+            await notify_nearby_users()
+            await asyncio.sleep(600)  # каждые 10 минут
     asyncio.create_task(loop())
 
 @router.post("/api/set-offline")
@@ -353,3 +359,4 @@ def get_stats():
         return {"count": count}
     except Exception as e:
         return {"error": str(e)}
+    
