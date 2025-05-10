@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException, APIRouter
+from fastapi import FastAPI, Form, UploadFile, File, Request, HTTPException, APIRouter, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
@@ -259,13 +259,14 @@ async def broadcast_message(request: Request):
     return {"status": f"✅ Успешно отправлено {success} пользователям"}
 
 @app.get("/api/people")
-async def get_people():
+async def get_people(chat_id: str = Query(...)):
     try:
-        now = int(time.time() * 1000)  # Текущее время в миллисекундах
+        now = int(time.time() * 1000)  # текущее время в мс
         result = supabase.table("users") \
             .select("*") \
             .eq("status", "online") \
             .gt("online_until", now) \
+            .neq("chat_id", chat_id) \
             .execute()
 
         return result.data
