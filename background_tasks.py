@@ -92,7 +92,7 @@ async def notify_nearby_users():
 
                     # Обновляем last_notified
                     supabase.table("users").update({
-                        "last_notified": int(time.time() * 1000)
+                        "last_notify_date": int(time.time() * 1000)
                     }).eq("chat_id", user["chat_id"]).execute()
 
                     print(f"✅ Уведомление отправлено: {user['chat_id']}")
