@@ -102,3 +102,70 @@ async def notify_nearby_users():
 
     except Exception as e:
         print(f"❌ Ошибка в notify_nearby_users: {e}")
+
+async def send_daily_summary():
+    try:
+        now = datetime.utcnow()
+        yesterday = now.date().toordinal() - 1
+
+        users = supabase.table("users").select("*").execute().data
+
+        for user in users:
+            if not user.get("latitude") or not user.get("longitude") or not user.get("chat_id"):
+                continue
+
+            # Проверка: уже отправляли ли уведомление сегодня
+            last_summary = user.get("last_summary_sent")
+            if last_summary:
+                tz_name = tf.timezone_at(lat=user["latitude"], lng=user["longitude"]) or "UTC"
+                tz = pytz.timezone(tz_name)
+                last_dt = datetime.fromtimestamp(last_summary / 1000, tz)
+                if last_dt.date() == now.date():
+                    continue
+
+            # Находим пользователей, которые были онлайн вчера
+            found = False
+            for other in users:
+                if other["chat_id"] == user["chat_id"]:
+                    continue
+                if not other.get("latitude") or not other.get("longitude"):
+                    continue
+                if not isinstance(other.get("online_until"), int):
+                    continue
+
+                dt = datetime.utcfromtimestamp(other["online_until"] / 1000)
+                if dt.date().toordinal() != yesterday:
+                    continue
+
+                dist = calculate_distance(
+                    user["latitude"], user["longitude"],
+                    other["latitude"], other["longitude"]
+                )
+
+                if dist <= 30000:
+                    found = True
+                    break
+
+            if found:
+                # Уведомляем
+                try:
+                    async with httpx.AsyncClient() as client:
+                        await client.post(
+                            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                            json={
+                                "chat_id": user["chat_id"],
+                                "text": "📍 Вчера рядом с вами был кто-то онлайн. Не упустите возможность встретиться сегодня!"
+                            }
+                        )
+
+                    supabase.table("users").update({
+                        "last_summary_sent": int(time.time() * 1000)
+                    }).eq("chat_id", user["chat_id"]).execute()
+
+                    print(f"📬 Рядом кто-то был — уведомление отправлено: {user['chat_id']}")
+
+                except Exception as e:
+                    print(f"❌ Ошибка при отправке summary-уведомления: {e}")
+
+    except Exception as e:
+        print(f"❌ Ошибка в send_daily_summary: {e}")

@@ -11,7 +11,7 @@ from cloudinary_utils import upload_to_cloudinary
 from supabase import create_client, Client
 from cloudinary.uploader import destroy
 from timezonefinder import TimezoneFinder
-from background_tasks import notify_nearby_users
+from background_tasks import notify_nearby_users, send_daily_summary
 import pytz
 
 
@@ -280,12 +280,13 @@ async def get_people(chat_id: str = Query(...)):
         raise HTTPException(status_code=500, detail="Ошибка сервера")
     
 @app.on_event("startup")
-async def schedule_status_check():
+async def startup_tasks():
     async def loop():
         while True:
             await auto_reset_status()
             await notify_nearby_users()
-            await asyncio.sleep(600)  # каждые 10 минут
+            await send_daily_summary()
+            await asyncio.sleep(600)  # каждые 10 мин
     asyncio.create_task(loop())
 
 @router.post("/api/set-offline")
