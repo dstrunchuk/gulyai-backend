@@ -237,9 +237,9 @@ def delete_old_profiles():
         print(f"❌ Ошибка проверки старых анкет: {e}")
 
 # Запускаем планировщик
-scheduler = BackgroundScheduler()
-scheduler.add_job(delete_old_profiles, "interval", hours=24)
-scheduler.start()
+# scheduler = BackgroundScheduler()
+# scheduler.add_job(delete_old_profiles, "interval", hours=24)
+# scheduler.start()
 
 @app.on_event("shutdown")
 def shutdown_event():
@@ -374,7 +374,3 @@ def get_stats():
     except Exception as e:
         return {"error": str(e)}
     
-@app.get("/api/test-delete")
-async def test_delete():
-    delete_old_profiles()
-    return {"ok": True}
