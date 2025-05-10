@@ -58,11 +58,9 @@ async def notify_nearby_users():
             if user_time.hour < 17:
                 continue  # только после 17:00 по местному времени
 
-            last_notified = user.get("last_notified")
-            if last_notified:
-                last_dt = datetime.fromtimestamp(last_notified / 1000, tz)
-                if last_dt.date() == user_time.date():
-                    continue  # уже уведомлён сегодня
+            last_notify_date = user.get("last_notify_date")
+            if last_notify_date == today:
+                continue
 
             # Проверяем, есть ли рядом онлайн-пользователи
             nearby_found = False
