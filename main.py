@@ -52,7 +52,6 @@ def get_profile(chat_id: str):
     try:
         print("👉 Получен chat_id:", chat_id)
         result = supabase.table("users").select("*").eq("chat_id", str(chat_id)).execute()
-        print("📦 Результат поиска:", result.data)
 
         if not result.data or len(result.data) == 0:
             return JSONResponse(
