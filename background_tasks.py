@@ -40,29 +40,33 @@ async def notify_nearby_users():
 
         online_users = [
             u for u in users
-            if u.get("status") == "online" and isinstance(u.get("online_until"), int) and u["online_until"] > now_ts
+            if u.get("status") == "online"
+            and isinstance(u.get("online_until"), int)
+            and u["online_until"] > now_ts
         ]
 
         for user in users:
-            if not user.get("latitude") or not user.get("longitude"):
+            if not user.get("latitude") or not user.get("longitude") or not user.get("chat_id"):
                 continue
 
-            if not user.get("chat_id"):
-                continue
-
-            # Получаем часовой пояс по координатам
             tz_name = tf.timezone_at(lat=user["latitude"], lng=user["longitude"]) or "UTC"
             tz = pytz.timezone(tz_name)
             user_time = datetime.now(tz)
 
-            if user_time.hour < 17:
-                continue  # только после 17:00 по местному времени
+            weekday = user_time.weekday()  # 6 — воскресенье
 
-            last_notify_date = user.get("last_notify_date")
-            if last_notify_date == today:
-                continue
+            # ✅ СПЕЦИАЛЬНО ДЛЯ ВОСКРЕСЕНЬЯ: диапазон с 10:00 до 20:00
+            if weekday == 6:
+                if not (10 <= user_time.hour < 20):
+                    continue
+            else:
+                if user_time.hour < 17:
+                    continue  # В другие дни — только после 17:00
 
-            # Проверяем, есть ли рядом онлайн-пользователи
+            if user.get("last_notify_date") == today:
+                continue  # Уже было уведомление сегодня
+
+            # Ищем онлайн-людей рядом
             nearby_found = False
             for other in online_users:
                 if other["chat_id"] == user["chat_id"]:
@@ -80,7 +84,6 @@ async def notify_nearby_users():
                     break
 
             if nearby_found:
-                # Уведомление
                 try:
                     async with httpx.AsyncClient() as client:
                         await client.post(
@@ -91,7 +94,6 @@ async def notify_nearby_users():
                             }
                         )
 
-                    # Обновляем last_notified
                     supabase.table("users").update({
                         "last_notify_date": today
                     }).eq("chat_id", user["chat_id"]).execute()
