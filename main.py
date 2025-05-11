@@ -50,24 +50,20 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 @app.get("/api/profile/{chat_id}")
 def get_profile(chat_id: str):
     try:
+        print("👉 Получен chat_id:", chat_id)
         result = supabase.table("users").select("*").eq("chat_id", chat_id).execute()
+        print("📦 Результат поиска:", result.data)
 
-        if not result.data:
+        if not result.data or len(result.data) == 0:
             return JSONResponse(
                 status_code=200,
                 content={"ok": False, "message": "Анкета ещё не создана"}
             )
 
-        return {
-            "ok": True,
-            "profile": result.data[0]
-        }
-
+        return {"ok": True, "profile": result.data[0]}
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"ok": False, "error": str(e)}
-        )
+        print("❌ Ошибка:", e)
+        return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
 
 @app.post("/api/form")
 async def receive_form(
