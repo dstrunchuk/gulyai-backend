@@ -138,15 +138,16 @@ async def receive_form(
         return JSONResponse(status_code=500, content={"ok": False, "error": str(error)})
 
 @app.post("/api/update-profile")
-async def update_profile(data: dict):
+async def update_profile(request: Request):
     try:
+        data = await request.json()
         chat_id = data.get("chat_id")
+
         if not chat_id:
             return JSONResponse(status_code=400, content={"ok": False, "error": "chat_id is required"})
 
         data.pop("chat_id", None)
 
-        # Просто выводим для проверки
         print("Получено обновление:", data)
 
         supabase.table("users").update(data).eq("chat_id", chat_id).execute()
