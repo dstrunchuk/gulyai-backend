@@ -137,11 +137,12 @@ async def send_daily_summary():
                     continue
                 if not other.get("latitude") or not other.get("longitude"):
                     continue
-                if not isinstance(other.get("online_until"), int):
+                last_online_str = other.get("last_online_date")
+                if not last_online_str:
                     continue
 
-                dt = datetime.utcfromtimestamp(other["online_until"] / 1000)
-                if dt.date().toordinal() != yesterday:
+                last_online_date = datetime.strptime(last_online_str, "%Y-%m-%d").date()
+                if last_online_date.toordinal() != yesterday:
                     continue
 
                 dist = calculate_distance(
