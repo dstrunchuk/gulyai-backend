@@ -108,8 +108,8 @@ async def notify_nearby_users():
 
 async def send_daily_summary():
     try:
-        now = datetime.utcnow()
-        yesterday = now.date().toordinal() - 1
+        now_utc = datetime.utcnow()
+        yesterday = now_utc.date().toordinal() - 1
 
         users = supabase.table("users").select("*").execute().data
 
@@ -117,47 +117,64 @@ async def send_daily_summary():
             if not user.get("latitude") or not user.get("longitude") or not user.get("chat_id"):
                 continue
 
-            # Проверка часового пояса и времени
+            # Определяем часовой пояс пользователя
             tz_name = tf.timezone_at(lat=user["latitude"], lng=user["longitude"]) or "UTC"
             tz = pytz.timezone(tz_name)
             local_time = datetime.now(tz)
 
+            # Отправляем только с 9 до 12 по местному времени
             if not (9 <= local_time.hour < 12):
-                continue  # Только с 9 до 12 по местному времени
+                continue
 
-            # Проверка: уже отправляли ли уведомление сегодня
+            # Проверка: отправляли ли уже сегодня
             last_summary = user.get("last_summary_sent")
             if last_summary:
-                last_dt = datetime.fromtimestamp(last_summary / 1000, tz)
-                if last_dt.date() == now.date():
+                try:
+                    if isinstance(last_summary, str):
+                        # Вдруг старый формат — пропускаем
+                        print(f"[!] last_summary_sent в строковом формате, пропускаем: {user['chat_id']}")
+                        continue
+
+                    last_dt_utc = datetime.fromtimestamp(last_summary / 1000, tz=pytz.utc)
+                    last_dt_local = last_dt_utc.astimezone(tz)
+
+                    if last_dt_local.date() == local_time.date():
+                        continue  # Уже отправлено сегодня
+
+                except Exception as e:
+                    print(f"[!] Ошибка при разборе last_summary_sent у {user['chat_id']}: {e}")
                     continue
 
-            # Находим пользователей, которые были онлайн вчера
+            # Ищем пользователей, кто был онлайн вчера рядом
             found = False
             for other in users:
                 if other["chat_id"] == user["chat_id"]:
                     continue
                 if not other.get("latitude") or not other.get("longitude"):
                     continue
+
                 last_online_str = other.get("last_online_date")
                 if not last_online_str:
                     continue
 
-                last_online_date = datetime.strptime(last_online_str, "%Y-%m-%d").date()
-                if last_online_date.toordinal() != yesterday:
+                try:
+                    last_online_date = datetime.strptime(last_online_str, "%Y-%m-%d").date()
+                    if last_online_date.toordinal() != yesterday:
+                        continue
+
+                    dist = calculate_distance(
+                        user["latitude"], user["longitude"],
+                        other["latitude"], other["longitude"]
+                    )
+
+                    if dist <= 30000:
+                        found = True
+                        break
+
+                except Exception:
                     continue
 
-                dist = calculate_distance(
-                    user["latitude"], user["longitude"],
-                    other["latitude"], other["longitude"]
-                )
-
-                if dist <= 30000:
-                    found = True
-                    break
-
             if found:
-                # Уведомляем
                 try:
                     async with httpx.AsyncClient() as client:
                         await client.post(
@@ -168,14 +185,15 @@ async def send_daily_summary():
                             }
                         )
 
+                    # Сохраняем в UTC как timestamp в миллисекундах
                     supabase.table("users").update({
-                        "last_summary_sent": datetime.utcnow().isoformat()
+                        "last_summary_sent": int(datetime.utcnow().timestamp() * 1000)
                     }).eq("chat_id", user["chat_id"]).execute()
 
-                    print(f"📬 Рядом кто-то был — уведомление отправлено: {user['chat_id']}")
+                    print(f"📬 Уведомление отправлено: {user['chat_id']}")
 
                 except Exception as e:
-                    print(f"❌ Ошибка при отправке summary-уведомления: {e}")
+                    print(f"❌ Ошибка при отправке уведомления: {e}")
 
     except Exception as e:
         print(f"❌ Ошибка в send_daily_summary: {e}")
