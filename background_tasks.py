@@ -128,22 +128,27 @@ async def send_daily_summary():
 
             # Проверка: отправляли ли уже сегодня
             last_summary = user.get("last_summary_sent")
+
             if last_summary:
                 try:
+        # Если приходит строка (ISO 8601), разбираем
                     if isinstance(last_summary, str):
-                        # Вдруг старый формат — пропускаем
-                        print(f"[!] last_summary_sent в строковом формате, пропускаем: {user['chat_id']}")
-                        continue
+                        last_dt_utc = datetime.fromisoformat(last_summary.replace("Z", "")).replace(tzinfo=pytz.utc)
+                    elif isinstance(last_summary, (int, float)):
+            # Если всё ещё миллисекунды
+                        last_dt_utc = datetime.fromtimestamp(last_summary / 1000, tz=pytz.utc)
+                    else:
+            # Если уже datetime (Supabase может вернуть так)
+                        last_dt_utc = last_summary.astimezone(pytz.utc)
 
-                    last_dt_utc = datetime.fromtimestamp(last_summary / 1000, tz=pytz.utc)
                     last_dt_local = last_dt_utc.astimezone(tz)
 
                     if last_dt_local.date() == local_time.date():
-                        continue  # Уже отправлено сегодня
+                        continue  # Уже отправляли сегодня
 
                 except Exception as e:
                     print(f"[!] Ошибка при разборе last_summary_sent у {user['chat_id']}: {e}")
-                    continue
+                continue
 
             # Ищем пользователей, кто был онлайн вчера рядом
             found = False
