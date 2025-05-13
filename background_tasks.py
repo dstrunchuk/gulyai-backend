@@ -187,7 +187,7 @@ async def send_daily_summary():
 
                     # Сохраняем в UTC как timestamp в миллисекундах
                     supabase.table("users").update({
-                        "last_summary_sent": int(datetime.utcnow().timestamp() * 1000)
+                        "last_summary_sent": datetime.utcnow().isoformat() + "Z"
                     }).eq("chat_id", user["chat_id"]).execute()
 
                     print(f"📬 Уведомление отправлено: {user['chat_id']}")
